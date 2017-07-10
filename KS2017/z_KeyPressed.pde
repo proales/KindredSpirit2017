@@ -3,11 +3,9 @@ void keyPressed() {
   switch (keyCode) {
     case UP: 
        brightnessAdjustment += 10;
-       print("Brightness at: " + brightnessAdjustment + "\n");
        break;
     case DOWN: 
       brightnessAdjustment -= 10;
-      print("Brightness at: " + brightnessAdjustment + "\n");
       break;
     case LEFT: 
       overlayColor = true;
@@ -98,6 +96,4 @@ void keyPressed() {
       screenshotYAdjustment += 5;
       break;
   }
-  
-  print("BKey Code: " + keyCode + "\n");
 }

@@ -1,7 +1,7 @@
 void setup() {
   // Define window size
-  // Size will only take numbers so keep
-  // in sync with global height & width
+  // Size will only take numbers not variables
+  // so keep in sync with global width & height
   size(825, 350);
   
   // No lines
@@ -10,11 +10,14 @@ void setup() {
   // Load the map of the pixel locations from the CSV
   loadPixelMap();
   
-  // Initialize the color picker
-  colorPicker = new ColorPicker(0, 30, 830, 30, 255);
+  // Initialize the color picker, 255 is number of colors
+  colorPicker = new ColorPicker(0, colorPickerHeight, canvasWidth + 5, colorPickerHeight, 255);
   
   // Initialize the buttons
   loadButtons();
+  
+  // Setup the beat detection
+  beatSetup();
   
   // Setup pixel pusher
   registry = new DeviceRegistry();
@@ -26,4 +29,6 @@ void setup() {
   // Start sending pixels to PixelPushers
   registry.startPushing();
   registry.setAutoThrottle(true);  
+  
+  frameRate(60);
 }
