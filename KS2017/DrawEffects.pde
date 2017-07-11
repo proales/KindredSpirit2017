@@ -121,22 +121,25 @@ void djEffect() {
   }
 }
 
-ArrayList<Point> rainList = new ArrayList<Integer>();
+ArrayList<Point> rainList = new ArrayList<Point>();
 void rainEffect() {
+  stroke(colorOverlay);
+  strokeWeight(3);
   int random = round(random(canvasWidth - 30));
   for (int i = 0; i < rainList.size(); i++) {
     Point rainlet = rainList.get(i);
     if (rainlet.y < 1500) {
-      rainList.set(i, size);
+      rainList.set(i, new Point(rainlet.x, rainlet.y + 1));
     } else {
-      headList.remove(i);
+      rainList.remove(i);
     }
-    ellipse(rainlet.x, rainlet.y, 1, 10);
+    line(rainlet.x, rainlet.y, rainlet.x, rainlet.y + 20);
   }
-  
-  
+  rainList.add(new Point(random, 0));
 }
 
+int colorWalkValue = 0;
 void walkColorEffect() {
-  
+  colorWalkValue = (colorWalkValue + 1) % 255;
+  colorOverlay = color(colorWalkValue);
 }
