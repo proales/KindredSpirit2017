@@ -28,10 +28,10 @@ void addEffects() {
   // 3 here because there are three color channels added up above.
   averageBrightness = round(averageBrightness / (topSectionHeight * canvasWidth * 3));
   // 90 and 70 are arbitrary here
-  if (averageBrightness > 90) {
-    avgerageBrightnessAdjustment--;
-  } else if (averageBrightness < 70) {
-    avgerageBrightnessAdjustment++;
+  if (averageBrightness > 90 + brightnessAdjustment) {
+    avgerageBrightnessAdjustment -= 10;
+  } else if (averageBrightness < 70 + brightnessAdjustment) {
+    avgerageBrightnessAdjustment += 10;
   }
 }
 
@@ -56,13 +56,15 @@ void handDrawnEffects() {
   djEffect();
   rainEffect();
   walkColorEffect();
+  colorLockEffect();
+  // Draw a black rectangle over the bottom portion so the hand drawn effects dont cover the output
   noStroke();
   fill(color(0, 0, 0));
   rect(0, topSectionHeight, canvasWidth - colorDisplayBandWidth, 150);
 }
 
 void videoEffect() {
-  if (effect1) {
+  if (effect0) {
     beatDetectionOn = false;
     avgerageBrightnessAdjustment = 0;
     beatBrightness = 0;
@@ -72,74 +74,104 @@ void videoEffect() {
   }
 }
 
-ArrayList<Integer> headList = new ArrayList<Integer>();
+void colorLockEffect() {
+  if (effect1) {
+    colorOverlay = colorSelected;
+  }
+}
+
+class EffectPoint {
+  EffectPoint(int size, int colorValue) {
+    this.size = size;
+    this.colorValue = colorValue;
+  }
+  int size;
+  int colorValue;
+}
+ArrayList<EffectPoint> headList = new ArrayList<EffectPoint>();
 int headStep = 0;
 void headEffect() {
   if (effect2) {
     int centerX = 375;
     int centerY = 120;
     noFill();
-    stroke(colorOverlay);
     strokeWeight(10);
     for (int i = 0; i < headList.size(); i++) {
-      int size = headList.get(i) + 10;
+      int size = headList.get(i).size + 10;
+      stroke(headList.get(i).colorValue);
+      ellipse(centerX, centerY, size, size);
       if (size < 1000) {
-        headList.set(i, size);
+        headList.set(i, new EffectPoint(size, headList.get(i).colorValue));
       } else {
         headList.remove(i);
       }
-      ellipse(centerX, centerY, size, size);
     }
     if (headStep == 0) {
-      headList.add(0);
+      headList.add(new EffectPoint(0, colorOverlay));
     } 
     headStep = (headStep + 1) % 10;
 
   }
 }
 
-ArrayList<Integer> djList = new ArrayList<Integer>();
+ArrayList<EffectPoint> djList = new ArrayList<EffectPoint>();
 void djEffect() {
   if (effect3) {
     int centerX = 675;
     int centerY = 70;
     noFill();
-    stroke(colorOverlay);
     strokeWeight(10);
-    for (int i = 0; i < headList.size(); i++) {
-      int size = headList.get(i) + 10;
-      if (size < 1500) {
-        headList.set(i, size);
-      } else {
-        headList.remove(i);
-      }
+    for (int i = 0; i < djList.size(); i++) {
+      int size = djList.get(i).size + 10;
+      stroke(djList.get(i).colorValue);
       ellipse(centerX, centerY, size, size);
+      if (size < 1500) {
+        djList.set(i, new EffectPoint(size, djList.get(i).colorValue));
+      } else {
+        djList.remove(i);
+      }
     }
     if (beatLevel > 47) {
-      headList.add(0);
+      djList.add(new EffectPoint(0, colorOverlay));
     } 
   }
 }
 
-ArrayList<Point> rainList = new ArrayList<Point>();
-void rainEffect() {
-  stroke(colorOverlay);
-  strokeWeight(3);
-  int random = round(random(canvasWidth - 30));
-  for (int i = 0; i < rainList.size(); i++) {
-    Point rainlet = rainList.get(i);
-    if (rainlet.y < 1500) {
-      rainList.set(i, new Point(rainlet.x, rainlet.y + 1));
-    } else {
-      rainList.remove(i);
-    }
-    line(rainlet.x, rainlet.y, rainlet.x, rainlet.y + 20);
+class RainDrop {
+  RainDrop(int x, int y, int colorValue) {
+    this.x = x;
+    this.y = y;
+    this.colorValue = colorValue;
   }
-  rainList.add(new Point(random, 0));
+  int x;
+  int y;
+  int colorValue;
+}
+ArrayList<RainDrop> rainList = new ArrayList<RainDrop>();
+void rainEffect() {
+  if (effect4) {
+    strokeWeight(3);
+    int random = round(random(canvasWidth - 30));
+    for (int i = 0; i < rainList.size(); i++) {
+      RainDrop rainlet = rainList.get(i);
+      if (rainlet.y < 1500) {
+        rainList.set(i, new RainDrop(rainlet.x, rainlet.y + 1, rainlet.colorValue));
+      } else {
+        rainList.remove(i);
+      }
+      stroke(rainlet.colorValue);
+      line(rainlet.x, rainlet.y, rainlet.x, rainlet.y + 20);
+    }
+    rainList.add(new RainDrop(random, 0, colorOverlay));
+  }
 }
 
 int colorWalkValue = 0;
 void walkColorEffect() {
-  colorWalkValue = (colorWalkValue + 1) % 255;
-  colorOverlay = color(colorWalkValue);
+  if (effect5) {
+    colorMode(HSB);
+    colorWalkValue = (colorWalkValue + 1) % 765;
+    colorOverlay = color(round(colorWalkValue / 3), 255, 255);
+    colorMode(RGB);
+  }
 }

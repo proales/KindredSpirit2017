@@ -19,6 +19,9 @@ void setup() {
   // Setup the beat detection
   beatSetup();
   
+  // UDP Setup
+  udpSetup();
+  
   // Setup pixel pusher
   registry = new DeviceRegistry();
   pixelPusherObserver = new PixelPusherObserver();

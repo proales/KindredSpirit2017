@@ -33,6 +33,9 @@ void draw() {
   
   // Display what was output to PixelPushers
   drawDisplay();
+  
+  // UDP Update
+  udpDraw();
 
   // Draw box on canvas for current selected color
   fill(colorSelected);
@@ -48,7 +51,7 @@ void draw() {
   // Draw the buttons
   drawButtons();
   
-  // Display the frame rate
+  // Display the frame rate, 70 and 15 are arbitrary values for the UI
   fill(color(255, 255, 255));
-  text(round(frameRate), canvasWidth - 50, canvasHeight - 30);
+  text(round(frameRate), canvasWidth - 70, canvasHeight - 15);
 } 

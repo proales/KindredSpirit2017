@@ -7,7 +7,7 @@ int colorPickerHeight = 30;
 int buttonRowHeight = 30;
 int screenshotHeight = topSectionHeight - colorPickerHeight - buttonRowHeight;
 int colorDisplayBandWidth = 25;
-int screenshotYAdjustment = 150;
+int screenshotYAdjustment = 30;
 
 // Pixel Pusher setup.
 DeviceRegistry registry;
@@ -26,6 +26,7 @@ boolean overlayColor = false;
 ColorPicker colorPicker;
 
 // Hand draw effects 
+boolean effect0 = false;
 boolean effect1 = false;
 boolean effect2 = false;
 boolean effect3 = false;
