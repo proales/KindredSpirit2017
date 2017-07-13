@@ -67,7 +67,6 @@ void videoEffect() {
   if (effect0) {
     beatDetectionOn = false;
     avgerageBrightnessAdjustment = 0;
-    beatBrightness = 0;
     noStroke();
     fill(color(0, 0, 0));
     rect(0, colorPickerHeight + buttonRowHeight, canvasWidth - colorDisplayBandWidth, screenshotHeight);
@@ -97,11 +96,12 @@ void headEffect() {
     noFill();
     strokeWeight(10);
     for (int i = 0; i < headList.size(); i++) {
-      int size = headList.get(i).size + 10;
-      stroke(headList.get(i).colorValue);
+      EffectPoint effectPoint = headList.get(i);
+      int size = effectPoint.size + 10;
+      stroke(effectPoint.colorValue);
       ellipse(centerX, centerY, size, size);
       if (size < 1000) {
-        headList.set(i, new EffectPoint(size, headList.get(i).colorValue));
+        headList.set(i, new EffectPoint(size, effectPoint.colorValue));
       } else {
         headList.remove(i);
       }
@@ -122,16 +122,17 @@ void djEffect() {
     noFill();
     strokeWeight(10);
     for (int i = 0; i < djList.size(); i++) {
-      int size = djList.get(i).size + 10;
-      stroke(djList.get(i).colorValue);
+      EffectPoint effectPoint = djList.get(i);
+      int size = effectPoint.size + 10;
+      stroke(effectPoint.colorValue);
       ellipse(centerX, centerY, size, size);
       if (size < 1500) {
-        djList.set(i, new EffectPoint(size, djList.get(i).colorValue));
+        djList.set(i, new EffectPoint(size, effectPoint.colorValue));
       } else {
         djList.remove(i);
       }
     }
-    if (beatLevel > 47) {
+    if (beatLevel > 35) {
       djList.add(new EffectPoint(0, colorOverlay));
     } 
   }

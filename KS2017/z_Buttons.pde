@@ -58,15 +58,15 @@ void mousePressed()
   }
   if (button6.MouseIsOver()) {
     beatDetectionOn = !beatDetectionOn;
-    
+    beatBrightness = 0;
     brightnessAdjustment = 0;
     avgerageBrightnessAdjustment = 0;
   }
   if (button7.MouseIsOver()) {
-    // Gain up
+    gainSetting += 1;
   }
   if (button8.MouseIsOver()) {
-    // Gain down
+    gainSetting -= 1;
   }
   if (button9.MouseIsOver()) {
     effect0 = !effect0;
