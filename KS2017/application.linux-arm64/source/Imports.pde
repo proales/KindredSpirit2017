@@ -18,3 +18,6 @@ import java.awt.Point;
 // Beat Detection libraries
 import ddf.minim.*;
 import ddf.minim.analysis.*;
+
+// UDP libraries
+import hypermedia.net.*;

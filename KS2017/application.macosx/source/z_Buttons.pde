@@ -42,7 +42,7 @@ void loadButtons() {
 void mousePressed()
 {
   if (button1.MouseIsOver()) {
-    // Reset all something something
+    loadDefaults();
   }
   if (button2.MouseIsOver()) {
     brightnessAdjustment += 1;

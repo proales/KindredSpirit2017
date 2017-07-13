@@ -7,7 +7,7 @@ int colorPickerHeight = 30;
 int buttonRowHeight = 30;
 int screenshotHeight = topSectionHeight - colorPickerHeight - buttonRowHeight;
 int colorDisplayBandWidth = 25;
-int screenshotYAdjustment = 30;
+ArrayList<PixelDefinition> pixelMap = new ArrayList<PixelDefinition>();
 
 // Pixel Pusher setup.
 DeviceRegistry registry;
@@ -15,6 +15,7 @@ PixelPusherObserver pixelPusherObserver;
 List<Strip> strips;
 
 // Effects setup
+int screenshotYAdjustment = 30;
 int brightnessAdjustment = 0;
 // -50 is just a good starting point 
 // this number will move around automatically
@@ -25,13 +26,17 @@ int blendColorMode = OVERLAY;
 boolean overlayColor = false;
 ColorPicker colorPicker;
 
-// Hand draw effects 
+// Hand draw effects setup
 boolean effect0 = false;
 boolean effect1 = false;
 boolean effect2 = false;
 boolean effect3 = false;
 boolean effect4 = false;
 boolean effect5 = false;
+ArrayList<EffectPoint> headList = new ArrayList<EffectPoint>();
+ArrayList<EffectPoint> djList = new ArrayList<EffectPoint>();
+ArrayList<RainDrop> rainList = new ArrayList<RainDrop>();
+int colorWalkValue = 0;
 
 // Beat detector setup
 BeatDetect beatDetect;
@@ -41,8 +46,43 @@ AudioInput audioInput;
 int beatLevel = 0;
 int beatBrightness = 0;
 boolean beatDetectionOn = true;
+int gainSetting = 35;
 
-ArrayList<PixelDefinition> pixelMap = new ArrayList<PixelDefinition>();
+// UDP setup
+UDP udp;
+
+void loadDefaults() {  
+  // Setup colorPicker
+  colorPicker = new ColorPicker(0, colorPickerHeight, canvasWidth + 5, colorPickerHeight, 255);
+  
+  // Effects defaults
+  screenshotYAdjustment = 30;
+  brightnessAdjustment = 0;
+  avgerageBrightnessAdjustment = -50;
+  colorOverlay = color(255, 0, 0);
+  colorSelected = color(0, 255, 0);
+  blendColorMode = OVERLAY;
+  overlayColor = false;
+
+  // Hand draw effects defaults
+  effect0 = false;
+  effect1 = false;
+  effect2 = false;
+  effect3 = false;
+  effect4 = false;
+  effect5 = false;
+  headList = new ArrayList<EffectPoint>();
+  djList = new ArrayList<EffectPoint>();
+  rainList = new ArrayList<RainDrop>();
+  colorWalkValue = 0;
+  
+  // Beat detector defaults
+  beatLevel = 0;
+  beatBrightness = 0;
+  beatDetectionOn = true;
+  gainSetting = 35;
+}
+
 class PixelDefinition { 
   int controller; 
   int strip;
@@ -51,7 +91,6 @@ class PixelDefinition {
   int y;
   int colorValue;
 } 
-
 void loadPixelMap() {
   BufferedReader reader;
   String line;

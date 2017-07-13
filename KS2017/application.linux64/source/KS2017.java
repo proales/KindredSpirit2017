@@ -38,11 +38,11 @@ public void setup() {
   // No lines
   noStroke();
   
+  // Load default variable values
+  loadDefaults();
+  
   // Load the map of the pixel locations from the CSV
   loadPixelMap();
-  
-  // Initialize the color picker, 255 is number of colors
-  colorPicker = new ColorPicker(0, colorPickerHeight, canvasWidth + 5, colorPickerHeight, 255);
   
   // Initialize the buttons
   loadButtons();
@@ -153,9 +153,9 @@ public void addEffects() {
   // 3 here because there are three color channels added up above.
   averageBrightness = round(averageBrightness / (topSectionHeight * canvasWidth * 3));
   // 90 and 70 are arbitrary here
-  if (averageBrightness > 90 + brightnessAdjustment) {
+  if (averageBrightness > 80 + brightnessAdjustment) {
     avgerageBrightnessAdjustment -= 10;
-  } else if (averageBrightness < 70 + brightnessAdjustment) {
+  } else if (averageBrightness < 60 + brightnessAdjustment) {
     avgerageBrightnessAdjustment += 10;
   }
 }
@@ -212,7 +212,6 @@ class EffectPoint {
   int size;
   int colorValue;
 }
-ArrayList<EffectPoint> headList = new ArrayList<EffectPoint>();
 int headStep = 0;
 public void headEffect() {
   if (effect2) {
@@ -239,7 +238,6 @@ public void headEffect() {
   }
 }
 
-ArrayList<EffectPoint> djList = new ArrayList<EffectPoint>();
 public void djEffect() {
   if (effect3) {
     int centerX = 675;
@@ -273,7 +271,6 @@ class RainDrop {
   int y;
   int colorValue;
 }
-ArrayList<RainDrop> rainList = new ArrayList<RainDrop>();
 public void rainEffect() {
   if (effect4) {
     strokeWeight(3);
@@ -292,7 +289,6 @@ public void rainEffect() {
   }
 }
 
-int colorWalkValue = 0;
 public void walkColorEffect() {
   if (effect5) {
     colorMode(HSB);
@@ -352,7 +348,7 @@ int colorPickerHeight = 30;
 int buttonRowHeight = 30;
 int screenshotHeight = topSectionHeight - colorPickerHeight - buttonRowHeight;
 int colorDisplayBandWidth = 25;
-int screenshotYAdjustment = 30;
+ArrayList<PixelDefinition> pixelMap = new ArrayList<PixelDefinition>();
 
 // Pixel Pusher setup.
 DeviceRegistry registry;
@@ -360,6 +356,7 @@ PixelPusherObserver pixelPusherObserver;
 List<Strip> strips;
 
 // Effects setup
+int screenshotYAdjustment = 30;
 int brightnessAdjustment = 0;
 // -50 is just a good starting point 
 // this number will move around automatically
@@ -370,13 +367,17 @@ int blendColorMode = OVERLAY;
 boolean overlayColor = false;
 ColorPicker colorPicker;
 
-// Hand draw effects 
+// Hand draw effects setup
 boolean effect0 = false;
 boolean effect1 = false;
 boolean effect2 = false;
 boolean effect3 = false;
 boolean effect4 = false;
 boolean effect5 = false;
+ArrayList<EffectPoint> headList = new ArrayList<EffectPoint>();
+ArrayList<EffectPoint> djList = new ArrayList<EffectPoint>();
+ArrayList<RainDrop> rainList = new ArrayList<RainDrop>();
+int colorWalkValue = 0;
 
 // Beat detector setup
 BeatDetect beatDetect;
@@ -386,8 +387,43 @@ AudioInput audioInput;
 int beatLevel = 0;
 int beatBrightness = 0;
 boolean beatDetectionOn = true;
+int gainSetting = 35;
 
-ArrayList<PixelDefinition> pixelMap = new ArrayList<PixelDefinition>();
+// UDP setup
+UDP udp;
+
+public void loadDefaults() {  
+  // Setup colorPicker
+  colorPicker = new ColorPicker(0, colorPickerHeight, canvasWidth + 5, colorPickerHeight, 255);
+  
+  // Effects defaults
+  screenshotYAdjustment = 30;
+  brightnessAdjustment = 0;
+  avgerageBrightnessAdjustment = -50;
+  colorOverlay = color(255, 0, 0);
+  colorSelected = color(0, 255, 0);
+  blendColorMode = OVERLAY;
+  overlayColor = false;
+
+  // Hand draw effects defaults
+  effect0 = false;
+  effect1 = false;
+  effect2 = false;
+  effect3 = false;
+  effect4 = false;
+  effect5 = false;
+  headList = new ArrayList<EffectPoint>();
+  djList = new ArrayList<EffectPoint>();
+  rainList = new ArrayList<RainDrop>();
+  colorWalkValue = 0;
+  
+  // Beat detector defaults
+  beatLevel = 0;
+  beatBrightness = 0;
+  beatDetectionOn = true;
+  gainSetting = 35;
+}
+
 class PixelDefinition { 
   int controller; 
   int strip;
@@ -396,7 +432,6 @@ class PixelDefinition {
   int y;
   int colorValue;
 } 
-
 public void loadPixelMap() {
   BufferedReader reader;
   String line;
@@ -452,6 +487,9 @@ public void loadPixelMap() {
 // Beat Detection libraries
 
 
+
+// UDP libraries
+
 public void beatSetup() {
   minim = new Minim(this);
   audioInput = minim.getLineIn();
@@ -460,7 +498,6 @@ public void beatSetup() {
   beatListener = new BeatListener(beatDetect, audioInput);  
 }
 
-int gainSetting = 35;
 public void beatDetect() {
   // All these are magic numbers just to make it look good
   beatLevel = constrain(round(pow((audioInput.left.level()*gainSetting*10),1.4f)) - 10, 0, 100);
@@ -544,7 +581,7 @@ public void loadButtons() {
 public void mousePressed()
 {
   if (button1.MouseIsOver()) {
-    // Reset all something something
+    loadDefaults();
   }
   if (button2.MouseIsOver()) {
     brightnessAdjustment += 1;
@@ -825,9 +862,6 @@ public void keyPressed() {
       break;
   }
 }
-
-UDP udp;
-
 public void udpSetup() {
   udp = new UDP(this, 9901);
 }

@@ -7,11 +7,11 @@ void setup() {
   // No lines
   noStroke();
   
+  // Load default variable values
+  loadDefaults();
+  
   // Load the map of the pixel locations from the CSV
   loadPixelMap();
-  
-  // Initialize the color picker, 255 is number of colors
-  colorPicker = new ColorPicker(0, colorPickerHeight, canvasWidth + 5, colorPickerHeight, 255);
   
   // Initialize the buttons
   loadButtons();

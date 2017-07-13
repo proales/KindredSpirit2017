@@ -1,6 +1,3 @@
-import hypermedia.net.*;
-UDP udp;
-
 void udpSetup() {
   udp = new UDP(this, 9901);
 }

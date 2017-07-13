@@ -28,9 +28,9 @@ void addEffects() {
   // 3 here because there are three color channels added up above.
   averageBrightness = round(averageBrightness / (topSectionHeight * canvasWidth * 3));
   // 90 and 70 are arbitrary here
-  if (averageBrightness > 90 + brightnessAdjustment) {
+  if (averageBrightness > 80 + brightnessAdjustment) {
     avgerageBrightnessAdjustment -= 10;
-  } else if (averageBrightness < 70 + brightnessAdjustment) {
+  } else if (averageBrightness < 60 + brightnessAdjustment) {
     avgerageBrightnessAdjustment += 10;
   }
 }
@@ -87,7 +87,6 @@ class EffectPoint {
   int size;
   int colorValue;
 }
-ArrayList<EffectPoint> headList = new ArrayList<EffectPoint>();
 int headStep = 0;
 void headEffect() {
   if (effect2) {
@@ -114,7 +113,6 @@ void headEffect() {
   }
 }
 
-ArrayList<EffectPoint> djList = new ArrayList<EffectPoint>();
 void djEffect() {
   if (effect3) {
     int centerX = 675;
@@ -148,7 +146,6 @@ class RainDrop {
   int y;
   int colorValue;
 }
-ArrayList<RainDrop> rainList = new ArrayList<RainDrop>();
 void rainEffect() {
   if (effect4) {
     strokeWeight(3);
@@ -167,7 +164,6 @@ void rainEffect() {
   }
 }
 
-int colorWalkValue = 0;
 void walkColorEffect() {
   if (effect5) {
     colorMode(HSB);

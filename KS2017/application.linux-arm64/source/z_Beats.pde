@@ -6,7 +6,6 @@ void beatSetup() {
   beatListener = new BeatListener(beatDetect, audioInput);  
 }
 
-int gainSetting = 35;
 void beatDetect() {
   // All these are magic numbers just to make it look good
   beatLevel = constrain(round(pow((audioInput.left.level()*gainSetting*10),1.4)) - 10, 0, 100);
