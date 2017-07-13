@@ -14,3 +14,7 @@ import java.util.*;
 
 // General Java libraries
 import java.awt.Point;
+
+// Beat Detection libraries
+import ddf.minim.*;
+import ddf.minim.analysis.*;

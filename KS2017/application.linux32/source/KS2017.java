@@ -14,6 +14,9 @@ import com.heroicrobot.dropbit.discovery.*;
 import com.heroicrobot.dropbit.registry.*; 
 import java.util.*; 
 import java.awt.Point; 
+import ddf.minim.*; 
+import ddf.minim.analysis.*; 
+import hypermedia.net.*; 
 
 import java.util.HashMap; 
 import java.util.ArrayList; 
@@ -28,8 +31,8 @@ public class KS2017 extends PApplet {
 
 public void setup() {
   // Define window size
-  // Size will only take numbers so keep
-  // in sync with global height & width
+  // Size will only take numbers not variables
+  // so keep in sync with global width & height
   
   
   // No lines
@@ -38,11 +41,17 @@ public void setup() {
   // Load the map of the pixel locations from the CSV
   loadPixelMap();
   
-  // Initialize the color picker
-  colorPicker = new ColorPicker(0, 30, 830, 30, 255);
+  // Initialize the color picker, 255 is number of colors
+  colorPicker = new ColorPicker(0, colorPickerHeight, canvasWidth + 5, colorPickerHeight, 255);
   
   // Initialize the buttons
   loadButtons();
+  
+  // Setup the beat detection
+  beatSetup();
+  
+  // UDP Setup
+  udpSetup();
   
   // Setup pixel pusher
   registry = new DeviceRegistry();
@@ -54,6 +63,8 @@ public void setup() {
   // Start sending pixels to PixelPushers
   registry.startPushing();
   registry.setAutoThrottle(true);  
+  
+  frameRate(60);
 }
 public void draw() {
   // Setup canvas defaults
@@ -63,18 +74,22 @@ public void draw() {
   // Get screenshot
   try {
     Robot robot_Screenshot = new Robot();                        
-    // 50 for MacOS Header, 0 for offset from top adjustment
-    screenshot = new PImage(robot_Screenshot.createScreenCapture(new Rectangle(0, screenshotYAdjustment + 50, 600, 200 - 60)));
-  } catch (AWTException e) {
-    
-  }
+    screenshot = new PImage(robot_Screenshot.createScreenCapture(
+        new Rectangle(0, screenshotYAdjustment, 640, screenshotHeight)));
+  } catch (AWTException e) {}
   
   // Copy screenshot to canvas
-  image(screenshot, 0, 60, canvasWidth, pixelRows - 60);
+  image(screenshot, 0, colorPickerHeight + buttonRowHeight, canvasWidth - colorDisplayBandWidth, screenshotHeight);
+  
+  // 
+  handDrawnEffects();
   
   // Load the canvas pixel buffer
   loadPixels();
   
+  // Detect the beat
+  beatDetect();
+
   // Iterate through to average pixels and apply adjustments
   addEffects();
  
@@ -86,21 +101,206 @@ public void draw() {
   
   // Display what was output to PixelPushers
   drawDisplay();
+  
+  // UDP Update
+  udpDraw();
 
   // Draw box on canvas for current selected color
   fill(colorSelected);
-  rect(canvasWidth - colorBandWidth, 0, colorBandWidth, canvasHeight / 2);
+  rect(canvasWidth - colorDisplayBandWidth, 0, colorDisplayBandWidth, topSectionHeight / 2);
   
   // Draw box on canvas for current displayed color
   fill(colorOverlay);
-  rect(canvasWidth - colorBandWidth, canvasHeight / 2, colorBandWidth, canvasHeight / 2);
+  rect(canvasWidth - colorDisplayBandWidth, topSectionHeight / 2, colorDisplayBandWidth, topSectionHeight / 2);
   
   // Draw the color picker
   colorPicker.render();
   
   // Draw the buttons
   drawButtons();
+  
+  // Display the frame rate, 70 and 15 are arbitrary values for the UI
+  fill(color(255, 255, 255));
+  text(round(frameRate), canvasWidth - 70, canvasHeight - 15);
 } 
+public void addEffects() {
+  noStroke();
+  int averageBrightness = 0;
+  for (int x = 0; x < canvasWidth; x++) {
+    for (int y = 0; y < topSectionHeight; y++) {
+      int adjustedColor;  // Adjusted for brigtness
+      int recoloredColor; // Adjusted for color rgb
+      int currentColor = pixels[y*canvasWidth+x];
+      
+      adjustedColor = increaseBrightness(currentColor, brightnessAdjustment + beatBrightness + avgerageBrightnessAdjustment);
+      
+      // If it is on then overlay a color
+      if (overlayColor) {
+        recoloredColor = mergeColors(adjustedColor, colorOverlay);
+      } else {
+        recoloredColor = adjustedColor;
+      }
+      
+      // Fill the new box of pixels
+      set(x, y, recoloredColor);
+      
+      pixels[y*canvasWidth+x] = recoloredColor;
+      averageBrightness += red(recoloredColor) + 
+                           green(recoloredColor) + 
+                           blue(recoloredColor);
+    }
+  }
+  // 3 here because there are three color channels added up above.
+  averageBrightness = round(averageBrightness / (topSectionHeight * canvasWidth * 3));
+  // 90 and 70 are arbitrary here
+  if (averageBrightness > 90 + brightnessAdjustment) {
+    avgerageBrightnessAdjustment -= 10;
+  } else if (averageBrightness < 70 + brightnessAdjustment) {
+    avgerageBrightnessAdjustment += 10;
+  }
+}
+
+public int increaseBrightness (int c, int amount) {
+  float newRed = constrain(red(c) + amount, 0, 255);
+  float newGreen = constrain(green(c) + amount, 0, 255);
+  float newBlue = constrain(blue(c) + amount, 0, 255);
+  return color(newRed, newGreen, newBlue); 
+}
+
+public int mergeColors(int a, int b) {
+  return blendColor(a, b, blendColorMode);
+}
+
+public int getPixel (int x, int y) {
+  return pixels[y*canvasWidth+x];
+}
+
+public void handDrawnEffects() {
+  videoEffect();
+  headEffect();
+  djEffect();
+  rainEffect();
+  walkColorEffect();
+  colorLockEffect();
+  // Draw a black rectangle over the bottom portion so the hand drawn effects dont cover the output
+  noStroke();
+  fill(color(0, 0, 0));
+  rect(0, topSectionHeight, canvasWidth - colorDisplayBandWidth, 150);
+}
+
+public void videoEffect() {
+  if (effect0) {
+    beatDetectionOn = false;
+    avgerageBrightnessAdjustment = 0;
+    noStroke();
+    fill(color(0, 0, 0));
+    rect(0, colorPickerHeight + buttonRowHeight, canvasWidth - colorDisplayBandWidth, screenshotHeight);
+  }
+}
+
+public void colorLockEffect() {
+  if (effect1) {
+    colorOverlay = colorSelected;
+  }
+}
+
+class EffectPoint {
+  EffectPoint(int size, int colorValue) {
+    this.size = size;
+    this.colorValue = colorValue;
+  }
+  int size;
+  int colorValue;
+}
+ArrayList<EffectPoint> headList = new ArrayList<EffectPoint>();
+int headStep = 0;
+public void headEffect() {
+  if (effect2) {
+    int centerX = 375;
+    int centerY = 120;
+    noFill();
+    strokeWeight(10);
+    for (int i = 0; i < headList.size(); i++) {
+      EffectPoint effectPoint = headList.get(i);
+      int size = effectPoint.size + 10;
+      stroke(effectPoint.colorValue);
+      ellipse(centerX, centerY, size, size);
+      if (size < 1000) {
+        headList.set(i, new EffectPoint(size, effectPoint.colorValue));
+      } else {
+        headList.remove(i);
+      }
+    }
+    if (headStep == 0) {
+      headList.add(new EffectPoint(0, colorOverlay));
+    } 
+    headStep = (headStep + 1) % 10;
+
+  }
+}
+
+ArrayList<EffectPoint> djList = new ArrayList<EffectPoint>();
+public void djEffect() {
+  if (effect3) {
+    int centerX = 675;
+    int centerY = 70;
+    noFill();
+    strokeWeight(10);
+    for (int i = 0; i < djList.size(); i++) {
+      EffectPoint effectPoint = djList.get(i);
+      int size = effectPoint.size + 10;
+      stroke(effectPoint.colorValue);
+      ellipse(centerX, centerY, size, size);
+      if (size < 1500) {
+        djList.set(i, new EffectPoint(size, effectPoint.colorValue));
+      } else {
+        djList.remove(i);
+      }
+    }
+    if (beatLevel > 35) {
+      djList.add(new EffectPoint(0, colorOverlay));
+    } 
+  }
+}
+
+class RainDrop {
+  RainDrop(int x, int y, int colorValue) {
+    this.x = x;
+    this.y = y;
+    this.colorValue = colorValue;
+  }
+  int x;
+  int y;
+  int colorValue;
+}
+ArrayList<RainDrop> rainList = new ArrayList<RainDrop>();
+public void rainEffect() {
+  if (effect4) {
+    strokeWeight(3);
+    int random = round(random(canvasWidth - 30));
+    for (int i = 0; i < rainList.size(); i++) {
+      RainDrop rainlet = rainList.get(i);
+      if (rainlet.y < 1500) {
+        rainList.set(i, new RainDrop(rainlet.x, rainlet.y + 1, rainlet.colorValue));
+      } else {
+        rainList.remove(i);
+      }
+      stroke(rainlet.colorValue);
+      line(rainlet.x, rainlet.y, rainlet.x, rainlet.y + 20);
+    }
+    rainList.add(new RainDrop(random, 0, colorOverlay));
+  }
+}
+
+int colorWalkValue = 0;
+public void walkColorEffect() {
+  if (effect5) {
+    colorMode(HSB);
+    colorWalkValue = (colorWalkValue + 1) % 765;
+    colorOverlay = color(round(colorWalkValue / 3), 255, 255);
+    colorMode(RGB);
+  }
+}
 // Pixel Pusher setup class.
 class PixelPusherObserver implements Observer {
   public boolean hasStrips = false;
@@ -113,6 +313,7 @@ public void drawPixelPusher(){
   if (pixelPusherObserver.hasStrips) {
     List<PixelPusher> pusherList = registry.getPushers();
     PixelPusher[] pixelPusherArray = new PixelPusher[8];
+    // Make sure the pixel pushers are in order
     for(PixelPusher pusher : pusherList) {
       int controllerNumber = pusher.getControllerOrdinal();
       pixelPusherArray[controllerNumber] = pusher;
@@ -142,126 +343,49 @@ public void drawDisplay() {
       rect(pixel.x, pixel.y + 210, 3, 3);
   }
 }
-
-//int getAverageColor(int sheet, int pixelX) {
-//  int x = pixelX % sheetWidth;
-//  int y = pixelX / sheetHeight;
-//  return avgColors[sheet + x][y];
-//}
-public void addEffects() {
- 
-  for (int x = 0; x < 825; x++) {
-    for (int y = 0; y < 200; y++) {
-      int avgColor;       // Average color of the old box of pixels
-      int adjustedColor;  // Adjusted for brigtness
-      int recoloredColor; // Adjusted for color rgb
-      int currentColor = pixels[y*canvasWidth+x];
-      
-      adjustedColor = increaseBrightness(currentColor, brightnessAdjustment);
-      
-      // If it is on then overlay a color
-      if (overlayColor) {
-        recoloredColor = mergeColors(adjustedColor, colorOverlay);
-      } else {
-        recoloredColor = adjustedColor;
-      }
-      
-      // Fill the new box of pixels
-      fill(recoloredColor);
-      // Replace the 0 here to move the pixelized output down
-      rect(x, y, 1, 1);
-      
-      //// Save average color of the box 
-      //avgColors[x][y] = recoloredColor;
-      pixels[y*canvasWidth+x] = recoloredColor;
-    }
-  }
-  
-}
-
-public int linearToColor (int value) {
-return HSBtoRGB(((float) value)/100.0f*.85f, (float) 1, (float) 1);
-}
-
-public int HSBtoRGB(float h, float s, float v) {
-  double r = 0, g = 0, b = 0, i, f, p, q, t;
-  i = Math.floor(h * 6);
-  f = h * 6 - i;
-  p = v * (1 - s);
-  q = v * (1 - f * s);
-  t = v * (1 - (1 - f) * s);
-  switch ((int) (i % 6)) {
-       case 0: r = v; g = t; b = p; break;
-       case 1: r = q; g = v; b = p; break;
-       case 2: r = p; g = v; b = t; break;
-       case 3: r = p; g = q; b = v; break;
-       case 4: r = t; g = p; b = v; break;
-       case 5: r = v; g = p; b = q; break;
-   }
-   return color((float) r * 255, (float) g * 255, (float) b * 255);
-}
-
-public int increaseBrightness (int c, int amount) {
-  float newRed = constrain(red(c) + amount, 0, 255);
-  float newGreen = constrain(green(c) + amount, 0, 255);
-  float newBlue = constrain(blue(c) + amount, 0, 255);
-  return color(newRed, newGreen, newBlue); 
-}
-
-public int mergeColors(int a, int b) {
-  return blendColor(a, b, blendColorMode);
-}
-
-public int avgColor(int col, int row) {
-  int red = 0;
-  int green = 0;
-  int blue = 0;
-  int currentColor;
-  int totalPixels = 7 * 7;
-  
-  for (int x = 0; x < pixelSize; x++) {
-    for (int y = 0; y < pixelSize; y++) {
-      currentColor = getPixel(col * pixelSize + x, row * pixelSize + y);
-      red += red(currentColor);
-      green += green(currentColor);
-      blue += blue(currentColor);
-    }
-  }
-  
-  return color(red/totalPixels, green/totalPixels, blue/totalPixels);
-}
-
-public int getPixel (int x, int y) {
-  return pixels[y*canvasWidth+x];
-}
 // Canvas setup
 PImage screenshot; 
-int pixelSize = 10;
-int sheetWidth = 20;
-int sheetHeight = 20;
-int numberColumns = 60;
-int numberRows = 20;
-int pixelColumns = pixelSize * numberColumns;
-int pixelRows = pixelSize * numberRows;
 int canvasWidth = 825; 
-int canvasHeight = 200;
-int colorBandWidth = 25;
-int screenshotYAdjustment = 150;
+int canvasHeight = 350;
+int topSectionHeight = canvasHeight - 150;
+int colorPickerHeight = 30;
+int buttonRowHeight = 30;
+int screenshotHeight = topSectionHeight - colorPickerHeight - buttonRowHeight;
+int colorDisplayBandWidth = 25;
+int screenshotYAdjustment = 30;
 
 // Pixel Pusher setup.
 DeviceRegistry registry;
 PixelPusherObserver pixelPusherObserver;
+List<Strip> strips;
 
 // Effects setup
 int brightnessAdjustment = 0;
-int colorNumber = 0;
+// -50 is just a good starting point 
+// this number will move around automatically
+int avgerageBrightnessAdjustment = -50;
 int colorOverlay = color(255, 0, 0);
 int colorSelected = color(0, 255, 0);
 int blendColorMode = OVERLAY;
 boolean overlayColor = false;
-
-List<Strip> strips;
 ColorPicker colorPicker;
+
+// Hand draw effects 
+boolean effect0 = false;
+boolean effect1 = false;
+boolean effect2 = false;
+boolean effect3 = false;
+boolean effect4 = false;
+boolean effect5 = false;
+
+// Beat detector setup
+BeatDetect beatDetect;
+BeatListener beatListener;
+Minim minim;
+AudioInput audioInput;
+int beatLevel = 0;
+int beatBrightness = 0;
+boolean beatDetectionOn = true;
 
 ArrayList<PixelDefinition> pixelMap = new ArrayList<PixelDefinition>();
 class PixelDefinition { 
@@ -290,11 +414,17 @@ public void loadPixelMap() {
     } else {
       PixelDefinition pd = new PixelDefinition();
       String[] lineArray = line.split(",");
+      // To avoid the header row and any rows with issues
       if (lineArray.length > 1) {
+        // PixelPusher
         pd.controller = Integer.parseInt(lineArray[0]);
+        // Strip
         pd.strip = Integer.parseInt(lineArray[1]);
+        // LED
         pd.number = Integer.parseInt(lineArray[2]);
+        // X Value
         pd.x = Integer.parseInt(lineArray[3]);
+        // Y Value
         pd.y = Integer.parseInt(lineArray[4]);
         pixelMap.add(pd);
       }
@@ -319,6 +449,57 @@ public void loadPixelMap() {
 // General Java libraries
 
 
+// Beat Detection libraries
+
+
+public void beatSetup() {
+  minim = new Minim(this);
+  audioInput = minim.getLineIn();
+  beatDetect = new BeatDetect(audioInput.bufferSize(), audioInput.sampleRate());
+  beatDetect.setSensitivity(10);  
+  beatListener = new BeatListener(beatDetect, audioInput);  
+}
+
+int gainSetting = 35;
+public void beatDetect() {
+  // All these are magic numbers just to make it look good
+  beatLevel = constrain(round(pow((audioInput.left.level()*gainSetting*10),1.4f)) - 10, 0, 100);
+  if (beatDetectionOn) {
+    beatBrightness = beatLevel;
+  } else {
+    beatBrightness = 0;
+  }
+}
+
+class BeatListener implements AudioListener
+{
+  private BeatDetect beatDetect;
+  private AudioInput source;
+  
+  BeatListener(BeatDetect beat, AudioInput source)
+  {
+    this.source = source;
+    this.source.addListener(this);
+    this.beatDetect = beat;
+  }
+  
+  public void samples(float[] samps)
+  {
+    beatDetect.detect(source.mix);
+  }
+  
+  public void samples(float[] sampsL, float[] sampsR)
+  {
+    beatDetect.detect(source.mix);
+  }
+}
+
+public void stop()
+{
+  audioInput.close();
+  minim.stop();
+  super.stop();
+}
 Button button1;
 Button button2;
 Button button3;
@@ -326,15 +507,93 @@ Button button4;
 Button button5;
 Button button6;
 Button button7;
+Button button8;
+Button button9;
+Button button10;
+Button button11;
+Button button21;
+Button button22;
+Button button23;
+Button button24;
+Button button25;
+
+Button button99;
 
 public void loadButtons() {
-  button1 = new Button("Overlay Color On", 0, 0, 120, 30);
-  button2 = new Button("Overlay Color Off", 120, 0, 120, 30);
-  button3 = new Button("Brigent", 240, 0, 60, 30);
-  button4 = new Button("Darken", 300, 0, 60, 30);
-  button5 = new Button("Hit White", 360, 0, 60, 30);
-  button6 = new Button("Hit Black", 420, 0, 60, 30);
-  button7 = new Button("Take Color", 480, 0, 60, 30);
+  button1 = new Button("Reset All", 0, 0, 80, buttonRowHeight, false);
+  button2 = new Button("Brigent", 80, 0, 50, buttonRowHeight, false);
+  button3 = new Button("Darken", 130, 0, 50, buttonRowHeight, false);
+  button4 = new Button("Hit White", 180, 0, 60, buttonRowHeight, false);
+  button5 = new Button("Hit Black", 240, 0, 60, buttonRowHeight, false);
+  button6 = new Button("Beat On/Off", 300, 0, 80, buttonRowHeight, false);
+  button7 = new Button("Gain Up", 380, 0, 55, buttonRowHeight, false);
+  button8 = new Button("Gain Down", 435, 0, 65, buttonRowHeight, false);
+  button9 = new Button("Video On/Off", 500, 0, 90, buttonRowHeight, false);
+  button10 = new Button("Overlay Color On/Off", 590, 0, 130, buttonRowHeight, false);
+  button11 = new Button("Take Color", 720, 0, 80, buttonRowHeight, false);
+  
+  // Buttons running vertically down the side
+  button21 = new Button("C. Lock", canvasWidth - colorDisplayBandWidth - 25, topSectionHeight, colorDisplayBandWidth + 25, buttonRowHeight, true);
+  button22 = new Button("Head", canvasWidth - colorDisplayBandWidth - 10, topSectionHeight + buttonRowHeight * 1, colorDisplayBandWidth + 10, buttonRowHeight, true);
+  button23 = new Button("DJ", canvasWidth - colorDisplayBandWidth, topSectionHeight + buttonRowHeight * 2, colorDisplayBandWidth, buttonRowHeight, true);
+  button24 = new Button("Rain", canvasWidth - colorDisplayBandWidth - 10, topSectionHeight + buttonRowHeight * 3, colorDisplayBandWidth + 10, buttonRowHeight, true);
+  button25 = new Button("C. Walk", canvasWidth - colorDisplayBandWidth - 25, topSectionHeight + buttonRowHeight * 4, colorDisplayBandWidth + 25, buttonRowHeight, true);
+}
+
+// mouse button clicked
+public void mousePressed()
+{
+  if (button1.MouseIsOver()) {
+    // Reset all something something
+  }
+  if (button2.MouseIsOver()) {
+    brightnessAdjustment += 1;
+  }
+  if (button3.MouseIsOver()) {
+    brightnessAdjustment -= 1;
+  }
+  if (button4.MouseIsOver()) {
+    avgerageBrightnessAdjustment = 500;
+  }
+  if (button5.MouseIsOver()) {
+    avgerageBrightnessAdjustment = -500;
+  }
+  if (button6.MouseIsOver()) {
+    beatDetectionOn = !beatDetectionOn;
+    beatBrightness = 0;
+    brightnessAdjustment = 0;
+    avgerageBrightnessAdjustment = 0;
+  }
+  if (button7.MouseIsOver()) {
+    gainSetting += 1;
+  }
+  if (button8.MouseIsOver()) {
+    gainSetting -= 1;
+  }
+  if (button9.MouseIsOver()) {
+    effect0 = !effect0;
+  }
+  if (button10.MouseIsOver()) {
+    overlayColor = !overlayColor;
+  }
+  if (button11.MouseIsOver()) {
+    colorOverlay = colorSelected;
+  }
+  if (button21.MouseIsOver()) {
+    effect1 = !effect1;
+  }
+  if (button22.MouseIsOver()) {
+    effect2 = !effect2;
+  }
+  if (button23.MouseIsOver()) {
+    effect3 = !effect3;
+  }
+  if (button24.MouseIsOver()) {
+    effect4 = !effect4;
+  }
+  if (button25.MouseIsOver()) {
+    effect5 = !effect5;
+  }
 }
 
 public void drawButtons() {
@@ -344,15 +603,16 @@ public void drawButtons() {
   button4.Draw();
   button5.Draw();
   button6.Draw();
-  button7.Draw();  
-}
-
-// mouse button clicked
-public void mousePressed()
-{
-  if (button1.MouseIsOver()) {
-    overlayColor = true;
-  }
+  button7.Draw();
+  button8.Draw(); 
+  button9.Draw();
+  button10.Draw();   
+  button11.Draw(); 
+  button21.Draw(); 
+  button22.Draw(); 
+  button23.Draw(); 
+  button24.Draw(); 
+  button25.Draw(); 
 }
 
 // the Button class
@@ -362,21 +622,31 @@ class Button {
   float y;      
   float w;     
   float h;    
+  boolean isDark;
   
   // constructor
-  Button(String labelB, float xpos, float ypos, float widthB, float heightB) {
+  Button(String labelB, float xpos, float ypos, float widthB, float heightB, boolean isDark) {
     label = labelB;
     x = xpos;
     y = ypos;
     w = widthB;
     h = heightB;
+    this.isDark = isDark;
   }
   
   public void Draw() {
-    fill(218);
+    if (isDark) {
+      fill(0);
+    } else {
+      fill(218);
+    }
     rect(x, y, w, h);
     textAlign(CENTER, CENTER);
-    fill(0);
+    if (isDark) {
+      fill(218);
+    } else {
+      fill(0);
+    }
     text(label, x + (w / 2), y + (h / 2));
   }
   
@@ -461,11 +731,9 @@ public void keyPressed() {
   switch (keyCode) {
     case UP: 
        brightnessAdjustment += 10;
-       print("Brightness at: " + brightnessAdjustment + "\n");
        break;
     case DOWN: 
       brightnessAdjustment -= 10;
-      print("Brightness at: " + brightnessAdjustment + "\n");
       break;
     case LEFT: 
       overlayColor = true;
@@ -556,8 +824,23 @@ public void keyPressed() {
       screenshotYAdjustment += 5;
       break;
   }
-  
-  print("BKey Code: " + keyCode + "\n");
+}
+
+UDP udp;
+
+public void udpSetup() {
+  udp = new UDP(this, 9901);
+}
+
+int updCounter = 0;
+public void udpDraw() {
+  if (updCounter == 0) {
+    // Command line broadcast redirect:
+    // sudo socat UDP4-RECVFROM:9000,fork UDP4-SENDTO:192.168.86.255:9001,broadcast
+    udp.send(str(frameCount), "localhost", 9000);
+    udp.send("STFU", "10.1.1.200", 9901);
+  }
+  updCounter = (updCounter + 1) % 20;
 }
   public void settings() {  size(825, 350); }
   static public void main(String[] passedArgs) {

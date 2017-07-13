@@ -10,6 +10,7 @@ void drawPixelPusher(){
   if (pixelPusherObserver.hasStrips) {
     List<PixelPusher> pusherList = registry.getPushers();
     PixelPusher[] pixelPusherArray = new PixelPusher[8];
+    // Make sure the pixel pushers are in order
     for(PixelPusher pusher : pusherList) {
       int controllerNumber = pusher.getControllerOrdinal();
       pixelPusherArray[controllerNumber] = pusher;
@@ -39,9 +40,3 @@ void drawDisplay() {
       rect(pixel.x, pixel.y + 210, 3, 3);
   }
 }
-
-//int getAverageColor(int sheet, int pixelX) {
-//  int x = pixelX % sheetWidth;
-//  int y = pixelX / sheetHeight;
-//  return avgColors[sheet + x][y];
-//}
